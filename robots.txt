@@ -1,0 +1,8 @@
+User-agent: Baiduspider
+Allow: /
+Disallow: /admin
+
+User-agent: *
+Allow: /
+
+Sitemap: https://wonderful-gecko-6f9d0b.netlify.app/sitemap.xml

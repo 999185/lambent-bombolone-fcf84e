@@ -1,0 +1,22 @@
+{
+  "name": "跑步星球",
+  "short_name": "跑步星球",
+  "description": "你的私人跑步管家 - 记录、装备、积分、勋章",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#38bdf8",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

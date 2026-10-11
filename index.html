@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="跑步星球">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <meta name="description" content="跑步星球 - 不只是跑步记录。路线回放、装备管理、积分挑战、勋章成就，你的私人跑步教练。永久免费，云端同步。">
+    <meta name="keywords" content="跑步,跑步记录,跑步星球,跑步打卡,运动记录,跑步装备,跑步积分,跑步勋章">
+    <title>跑步星球 — 让每一次奔跑都有意义</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(() => {});
+      });
+    }
+    </script>
+    <style>
+        :root {
+            --bg: #05080f;
+            --text: #ededed;
+            --muted: #888;
+            --accent: #00d4ff;
+            --accent2: #a78bfa;
+            --accent3: #f472b6;
+            --border: rgba(255,255,255,0.06);
+            --card-bg: rgba(255,255,255,0.02);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            overflow-x: hidden;
+            cursor: none;
+        }
+        a { color: inherit; text-decoration: none; }
+
+        /* Custom cursor */
+        .cursor {
+            position: fixed; width: 20px; height: 20px;
+            border: 2px solid var(--accent);
+            border-radius: 50%; pointer-events: none; z-index: 9999;
+            transition: transform 0.15s, width 0.15s, height 0.15s, border-color 0.15s;
+            mix-blend-mode: difference;
+        }
+        .cursor-dot {
+            position: fixed; width: 4px; height: 4px;
+            background: var(--accent);
+            border-radius: 50%; pointer-events: none; z-index: 9999;
+        }
+
+        /* Grid background */
+        .grid-bg {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 0; opacity: 0.03;
+            background-image: linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px);
+            background-size: 60px 60px;
+        }
+
+        /* Hero */
+        .hero {
+            position: relative; z-index: 1;
+            min-height: 100vh;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            text-align: center; padding: 40px 24px;
+        }
+        .hero-ornament {
+            position: absolute; border-radius: 50%; filter: blur(180px); opacity: 0.15;
+            pointer-events: none;
+        }
+        .hero-label {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 8px 20px;
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 100px;
+            font-size: 13px; font-weight: 500;
+            color: var(--muted);
+            background: rgba(255,255,255,0.02);
+            margin-bottom: 40px;
+            letter-spacing: 0.5px;
+        }
+        .hero-label .dot {
+            width: 6px; height: 6px;
+            background: #22c55e; border-radius: 50%;
+            box-shadow: 0 0 8px #22c55e;
+            animation: pulse 2s ease infinite;
+        }
+        .hero h1 {
+            font-size: clamp(52px, 10vw, 96px);
+            font-weight: 900;
+            letter-spacing: -3px;
+            line-height: 1;
+            margin-bottom: 28px;
+            max-width: 900px;
+        }
+        .hero h1 .gradient {
+            background: linear-gradient(135deg, #fff 0%, #a5b4fc 40%, #818cf8 70%, #c084fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .hero p {
+            font-size: 19px; color: var(--muted);
+            max-width: 540px; margin: 0 auto 48px;
+            font-weight: 400; line-height: 1.8;
+        }
+        .hero-cta {
+            display: inline-flex; align-items: center; gap: 12px;
+            padding: 18px 40px;
+            background: #fff;
+            color: #000;
+            font-size: 16px; font-weight: 600;
+            border-radius: 12px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            letter-spacing: -0.3px;
+        }
+        .hero-cta:hover {
+            transform: scale(1.03);
+            box-shadow: 0 20px 60px rgba(255,255,255,0.08);
+        }
+        .hero-cta .arrow {
+            display: inline-block; transition: transform 0.2s;
+        }
+        .hero-cta:hover .arrow { transform: translateX(4px); }
+
+        /* Marquee strip */
+        .marquee {
+            position: relative; z-index: 1;
+            overflow: hidden; white-space: nowrap;
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            padding: 20px 0; margin: 0 0 80px;
+        }
+        .marquee-inner {
+            display: inline-block;
+            animation: marquee 30s linear infinite;
+        }
+        .marquee span {
+            font-size: 15px; color: var(--muted);
+            margin: 0 32px; letter-spacing: 1px; font-weight: 500;
+        }
+
+        /* Sections */
+        section {
+            position: relative; z-index: 1;
+            max-width: 1200px; margin: 0 auto;
+            padding: 100px 32px;
+        }
+        .eyebrow {
+            font-size: 12px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 3px;
+            color: var(--accent); margin-bottom: 16px;
+        }
+        .section-title {
+            font-size: clamp(32px, 5vw, 48px);
+            font-weight: 800; letter-spacing: -1.5px;
+            line-height: 1.15; margin-bottom: 20px;
+        }
+        .section-desc {
+            font-size: 18px; color: var(--muted);
+            max-width: 500px; margin-bottom: 64px; line-height: 1.7;
+        }
+
+        /* Cards grid — alternating layout */
+        .card-row {
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 2px; margin-bottom: 2px;
+            border-radius: 20px; overflow: hidden;
+        }
+        .big-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 52px 44px;
+            transition: background 0.4s, border-color 0.4s;
+            position: relative; overflow: hidden;
+        }
+        .big-card:hover {
+            background: rgba(255,255,255,0.03);
+            border-color: rgba(255,255,255,0.12);
+        }
+        .big-card .card-icon {
+            font-size: 40px; margin-bottom: 24px;
+        }
+        .big-card h4 {
+            font-size: 22px; font-weight: 700; margin-bottom: 12px;
+            letter-spacing: -0.5px;
+        }
+        .big-card p {
+            font-size: 15px; color: var(--muted); line-height: 1.8;
+        }
+        .big-card .card-glow {
+            position: absolute; width: 200px; height: 200px;
+            border-radius: 50%; filter: blur(100px); opacity: 0;
+            transition: opacity 0.6s;
+            pointer-events: none;
+        }
+        .big-card:hover .card-glow { opacity: 0.06; }
+
+        /* Three column */
+        .three-col {
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            gap: 2px; margin-bottom: 2px;
+        }
+
+        /* Badge showcase */
+        .badge-row {
+            display: flex; justify-content: center; gap: 24px; flex-wrap: wrap;
+        }
+        .badge-circle {
+            width: 100px; height: 100px;
+            border-radius: 50%;
+            background: var(--card-bg);
+            border: 2px solid var(--border);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 44px;
+            transition: transform 0.4s, border-color 0.4s, box-shadow 0.4s;
+        }
+        .badge-circle:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 24px 60px rgba(0,0,0,0.4);
+        }
+        .badge-circle.gold { border-color: rgba(251,191,36,0.4); }
+        .badge-circle.gold:hover { border-color: #fbbf24; box-shadow: 0 0 40px rgba(251,191,36,0.15); }
+        .badge-circle.silver { border-color: rgba(148,163,184,0.3); }
+        .badge-circle.silver:hover { border-color: #94a3b8; }
+
+        /* Steps */
+        .steps-row {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px;
+            counter-reset: step;
+        }
+        .step-block {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 44px 36px;
+            text-align: center;
+            transition: background 0.4s;
+        }
+        .step-block:hover { background: rgba(255,255,255,0.03); }
+        .step-block .num {
+            font-size: 64px; font-weight: 900;
+            background: linear-gradient(180deg, var(--accent), var(--accent2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1;
+            margin-bottom: 16px;
+        }
+        .step-block h4 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+        .step-block p { font-size: 14px; color: var(--muted); line-height: 1.7; }
+
+        /* Bottom CTA */
+        .cta-section {
+            text-align: center; padding: 140px 32px 120px;
+            position: relative; z-index: 1;
+        }
+        .cta-section .hero-cta {
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            color: #fff; margin-top: 32px;
+        }
+        .cta-section .hero-cta:hover {
+            box-shadow: 0 20px 60px rgba(0,212,255,0.2);
+        }
+
+        footer {
+            text-align: center; padding: 40px 24px;
+            color: #333; font-size: 13px;
+            border-top: 1px solid var(--border);
+            position: relative; z-index: 1;
+        }
+
+        /* Animations */
+        @keyframes marquee {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(40px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .reveal { opacity: 0; transform: translateY(40px); transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1); }
+        .reveal.visible { opacity: 1; transform: translateY(0); }
+
+        @media (max-width: 768px) {
+            .card-row, .three-col, .steps-row { grid-template-columns: 1fr; }
+            body { cursor: auto; }
+            .cursor, .cursor-dot { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="grid-bg"></div>
+    <div class="cursor" id="cursor"></div>
+    <div class="cursor-dot" id="cursorDot"></div>
+
+    <!-- Hero -->
+    <div class="hero">
+        <div class="hero-ornament" style="width:600px;height:600px;background:#818cf8;top:-200px;left:-100px;"></div>
+        <div class="hero-ornament" style="width:500px;height:500px;background:#00d4ff;bottom:-150px;right:-100px;"></div>
+        <div class="hero-label"><span class="dot"></span>永久免费 · 云端同步 · 多设备</div>
+        <h1>每一次奔跑<br><span class="gradient">都算数</span></h1>
+        <p>不只是跑步记录。路线回放、装备管理、积分挑战、勋章成就，你的私人跑步教练——在浏览器里，永久免费。</p>
+        <a class="hero-cta" href="invalid.html">开始奔跑 <span class="arrow">→</span></a>
+    </div>
+
+    <!-- Marquee -->
+    <div class="marquee">
+        <div class="marquee-inner">
+            <span>跑步记录</span><span>·</span>
+            <span>路线回放</span><span>·</span>
+            <span>装备管理</span><span>·</span>
+            <span>积分挑战</span><span>·</span>
+            <span>勋章成就</span><span>·</span>
+            <span>云端同步</span><span>·</span>
+            <span>跑步记录</span><span>·</span>
+            <span>路线回放</span><span>·</span>
+            <span>装备管理</span><span>·</span>
+            <span>积分挑战</span><span>·</span>
+            <span>勋章成就</span><span>·</span>
+            <span>云端同步</span>
+        </div>
+    </div>
+
+    <!-- Features -->
+    <section>
+        <div class="eyebrow">核心功能</div>
+        <div class="section-title">跑得越多<br>回报越多</div>
+        <div class="section-desc">不只是记录工具。跑步星球将你的每一次奔跑转化为积分、勋章和可视化的成长轨迹。</div>
+        <div class="card-row">
+            <div class="big-card">
+                <div class="card-glow" style="background:#00d4ff;top:20px;right:20px;"></div>
+                <div class="card-icon">🏃</div>
+                <h4>智能跑步记录</h4>
+                <p>记录距离、时长、配速，自动计算月度目标完成率。热力图日历让坚持变得可见，每次进步都不被忽略。</p>
+            </div>
+            <div class="big-card">
+                <div class="card-glow" style="background:#a78bfa;bottom:20px;left:20px;"></div>
+                <div class="card-icon">🗺️</div>
+                <h4>路线动画回放</h4>
+                <p>每次奔跑自动生成路线轨迹动画。重温你的跑步路线，见证从 3 公里到半马的每一步成长。</p>
+            </div>
+        </div>
+        <div class="three-col">
+            <div class="big-card">
+                <div class="card-glow" style="background:#f472b6;top:30px;left:30px;"></div>
+                <div class="card-icon">👟</div>
+                <h4>装备寿命管理</h4>
+                <p>跑鞋、手表、运动服，跟踪每件装备的累计里程。到期自动提醒更换，告别穿废鞋跑步。</p>
+            </div>
+            <div class="big-card">
+                <div class="card-glow" style="background:#34d399;top:30px;right:30px;"></div>
+                <div class="card-icon">⚡</div>
+                <h4>积分挑战系统</h4>
+                <p>每跑一公里都有积分。月度挑战、限时任务，用积分兑换奖品，跑步自带游戏乐趣。</p>
+            </div>
+            <div class="big-card">
+                <div class="card-glow" style="background:#fbbf24;bottom:30px;left:30px;"></div>
+                <div class="card-icon">☁️</div>
+                <h4>跨设备云同步</h4>
+                <p>注册即开启云端备份。换手机、换电脑、重装系统，登录就能找回一切，数据永远不丢。</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Badges -->
+    <section style="padding-top:40px;">
+        <div class="eyebrow" style="text-align:center;">荣誉殿堂</div>
+        <div class="section-title" style="text-align:center;">每一枚勋章<br>都是一段故事</div>
+        <div class="section-desc" style="text-align:center;margin-left:auto;margin-right:auto;">从第一次跑完 5 公里到累计 1000 公里，每个里程碑都有专属勋章见证。</div>
+        <div class="badge-row" style="margin-top:48px;">
+            <div class="badge-circle gold">🥇</div>
+            <div class="badge-circle silver">🥈</div>
+            <div class="badge-circle" style="border-color:rgba(217,119,6,0.4);">🥉</div>
+            <div class="badge-circle">🏃</div>
+            <div class="badge-circle gold">🌙</div>
+            <div class="badge-circle silver">🔥</div>
+            <div class="badge-circle">💪</div>
+            <div class="badge-circle silver">⭐</div>
+        </div>
+    </section>
+
+    <!-- Steps -->
+    <section>
+        <div class="eyebrow" style="text-align:center;">快速上手</div>
+        <div class="section-title" style="text-align:center;">三秒注册<br>立刻开跑</div>
+        <div class="section-desc" style="text-align:center;margin-left:auto;margin-right:auto;">不需要下载 App，不需要绑定手机。浏览器打开即用。</div>
+        <div class="steps-row" style="margin-top:48px;">
+            <div class="step-block">
+                <div class="num">01</div>
+                <h4>打开网页</h4>
+                <p>手机或电脑浏览器直接访问。不占内存，不偷隐私，极简纯粹。</p>
+            </div>
+            <div class="step-block">
+                <div class="num">02</div>
+                <h4>注册账号</h4>
+                <p>用户名 + 密码，十秒完成。自动开启云端备份，换设备无缝衔接。</p>
+            </div>
+            <div class="step-block">
+                <div class="num">03</div>
+                <h4>记录奔跑</h4>
+                <p>输入距离和时长，系统自动计算配速和积分。坚持打卡，等你解锁全部勋章。</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <div class="cta-section">
+        <div class="section-title" style="margin-bottom:16px;">准备好了吗？</div>
+        <p style="color:var(--muted);font-size:18px;">零付费 · 零广告 · 零套路</p>
+        <a class="hero-cta" href="invalid.html">现在开始 <span class="arrow">→</span></a>
+    </div>
+
+    <footer>
+        <p>跑步星球 &copy; 2026 — 认真对待每一次奔跑</p>
+    </footer>
+
+    <script>
+        // Custom cursor
+        const cursor = document.getElementById('cursor');
+        const cursorDot = document.getElementById('cursorDot');
+        let mouseX = 0, mouseY = 0;
+        let cursorX = 0, cursorY = 0;
+        document.addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; });
+        function updateCursor() {
+            cursorX += (mouseX - cursorX) * 0.15;
+            cursorY += (mouseY - cursorY) * 0.15;
+            cursor.style.left = (cursorX - 10) + 'px';
+            cursor.style.top = (cursorY - 10) + 'px';
+            cursorDot.style.left = mouseX + 'px';
+            cursorDot.style.top = mouseY + 'px';
+            requestAnimationFrame(updateCursor);
+        }
+        updateCursor();
+
+        // Hover effects on links/buttons
+        document.querySelectorAll('a, button').forEach(el => {
+            el.addEventListener('mouseenter', () => {
+                cursor.style.transform = 'scale(2.5)';
+                cursor.style.borderColor = 'rgba(255,255,255,0.5)';
+            });
+            el.addEventListener('mouseleave', () => {
+                cursor.style.transform = 'scale(1)';
+                cursor.style.borderColor = 'var(--accent)';
+            });
+        });
+
+        // Scroll reveal
+        const observer = new IntersectionObserver(entries => {
+            entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+        }, { threshold: 0.15 });
+        document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+        document.querySelectorAll('.big-card, .step-block, .badge-circle').forEach(el => {
+            el.classList.add('reveal'); observer.observe(el);
+        });
+    </script>
+</body>
+</html>
